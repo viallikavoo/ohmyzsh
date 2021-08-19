@@ -1,10 +1,12 @@
 ##############################################################################
 # History Configuration
 ##############################################################################
-eval $(ssh-agent -s)
+figlet "Welcome" | lolcat -a -s 99
+echo -e "\e[32mAny command you execute here will be recorded and \e[1;4;33mheld\e[0m against you" | lolcat -a
+eval $(ssh-agent -s)  &>/dev/null
 WORKSPACE=$HOME/Documents/Workspace
-ssh-add -k $WORKSPACE/github
-ssh-add -k $WORKSPACE/vmware-k8s
+ssh-add -k $WORKSPACE/github 2>/dev/null
+ssh-add -k $WORKSPACE/vmware-k8s 2>/dev/null
 #ssh-add -K $HOME/Documents/Workspace/Stash
 HISTSIZE=15000              #How many lines of history to keep in memory
 HISTFILE=~/zsh_history/zsh_history     #Where to save history to disk
@@ -13,15 +15,17 @@ HISTDUP=erase               #Erase duplicates in the history file
 setopt appendhistory     #Append history to the history file (no overwriting)
 setopt sharehistory      #Share history across terminals
 setopt incappendhistory  #Immediately append to the history file, not just when a term is kill
-
+autoload zcalc
 #stty -ixon
 #export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_144.jdk/Contents/Home
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
+export PATH=$PATH:/usr/local/go/bin
 export KOPS_STATE_STORE=s3://kops.infra.core.siteimprove.systems
-eval `dircolors $HOME/Documents/Workspace/gnome-terminal/dircolors`
+#eval `dircolors $HOME/Documents/Workspace/gnome-terminal/dircolors`
 source $HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 source $HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source $HOME/.oh-my-zsh/custom/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh
 source ~/.oh-my-zsh/custom.completion.kube.config
 ##################################Aliases go here##################################
 . $HOME/.asdf/asdf.sh
@@ -34,9 +38,7 @@ alias pl='git pull'
 alias ss='git status'
 #alias myip='curl http://api.ipify.org'
 alias downloads='cd $HOME/Downloads'
-alias awsecrlogin='$($(awslogin))'
 alias cd..='cd ..'
-
 ## a quick way to get out of current directory ##
 alias ..='cd ..'
 alias ...='cd ../../../'
@@ -57,31 +59,20 @@ alias reboot='sudo /sbin/reboot'
 alias poweroff='sudo /sbin/poweroff'
 alias halt='sudo /sbin/halt'
 alias shutdown='export COMMIT_TITLE=$(date)_$(hostname) && cd ~/zsh_history && git pull && git add . && git commit -am "$COMMIT_TITLE" && git push && sudo /sbin/shutdown'
+alias vpnon='nmcli con up id "SiteImprove L2TP VPN"'
+alias vpnoff='nmcli con down id "SiteImprove L2TP VPN"'
 ## pass options to free ##
-
-## get top process eating memory
-alias psmem='ps aux | sort -nr -k 4'
-alias psmem10='ps aux | sort -nr -k 4 | head -10'
-
-## get top process eating cpu ##
-alias pscpu='ps aux | sort -nr -k 3'
-alias pscpu10='ps aux | sort -nr -k 3 | head -10'
-
+alias output_laptop_speaker='pacmd set-default-sink "alsa_output.pci-0000_00_1f.3.analog-stereo"'
+alias output_jabra_headphone='pacmd set-default-sink "alsa_output.usb-0b0e_Jabra_Link_380_3050750A48A6-00.iec958-stereo"'
+alias output_ueboom='pacmd set-default-sink "bluez_sink.88_C6_26_9C_D0_6D.a2dp_sink"'
 ## Get server cpu info ##
 alias cpuinfo='lscpu'
-
-## older system use /proc/cpuinfo ##
-##alias cpuinfo='less /proc/cpuinfo' ##
-
-## get GPU ram on desktop / laptop##
-#alias secrets='cd $HOME/Documents/MobileLife/Devops-Workspace/secrets-area51'
-#alias dec='awsswitch && make decrypt-all'
-#alias enc='awsswitch && make encrypt-all'
-alias gpumeminfo='grep -i --color memory /var/log/Xorg.0.log'
+alias weather='curl "wttr.in/ørestad?format=4" && curl "wttr.in/ørestad"'
 ##################################Functions##################################
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
 gitcp(){
         message=$1
         display_usage() {
@@ -96,6 +87,12 @@ gitcp(){
 
         git commit -am "$1"
 	git push
+}
+
+argome(){
+	argocd login argocd.stmprv.io --password yAg9NKRAH3BoggtCQhWGXphHQWqeAM3B --username admin
+	baseurl=https://argocd.stmprv.io/applications/
+	argocd app list -o name | grep $1 | while read -r line; do chromium "$baseurl$line"; done
 }
 
 gch(){
@@ -114,18 +111,26 @@ gch(){
 }
 
 awslogin(){
-echo "aws ecr get-login --no-include-email --region eu-west-1"
+	profile=$1
+	aws-adfs login --profile $1
+	export AWS_PROFILE=$1
 }
 
-
-#awsswitch(){
-#eval $(aws-switch-role --role wealth_admins -t $(totp --aws))
+#fzfhelp(){
+#echo "wild: Exact match, return items that include wild.\n^music: Prefix-exact-match, return items that start with music.\n.mp3$: Suffix-exact-match, return items that end with .mp3.\n!fire: Inverse-exact-match, return items that do not include fire.\n!^music: Inverse-prefix-exact-match, return items that do not start with music.\n!.mp3$: Inverse-suffix-exact-match, return items that do not end with .mp3."
 #}
+
 
 awsclear(){
 	eval $(aws-clear-role)
 }
 
+kubectlgetall(){
+  for i in $(kubectl --context ${1} api-resources --verbs=list --namespaced -o name | grep -v "events.events.k8s.io" | grep -v "events" | sort | uniq); do
+    echo "Resource:" $i
+    kubectl --context ${1} -n ${2} get --ignore-not-found ${i}
+  done
+}
 ##################################adding keyskeys##################################
 
 #ssh-add -K ~/.ssh/id_rsa
@@ -191,9 +196,10 @@ plugins=(
   git
   zsh-autosuggestions
   zsh-syntax-highlighting
+  history-substring-search
+  sudo
 )
-
-source $ZSH/oh-my-zsh.sh
+source $ZSH/oh-my-zsh.sh 
 
 # User configuration
 
@@ -222,3 +228,5 @@ source $ZSH/oh-my-zsh.sh
 #
 # Example aliases
 # alias zshconfig="mate ~/.zshrc"
+
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
