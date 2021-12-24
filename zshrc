@@ -62,8 +62,8 @@ alias shutdown='export COMMIT_TITLE=$(date)_$(hostname) && cd ~/zsh_history && g
 alias vpnon='nmcli con up id "SiteImprove L2TP VPN"'
 alias vpnoff='nmcli con down id "SiteImprove L2TP VPN"'
 ## pass options to free ##
-alias output_laptop_speaker='pacmd set-default-sink "alsa_output.pci-0000_00_1f.3.analog-stereo"'
-alias output_jabra_headphone='pacmd set-default-sink "alsa_output.usb-0b0e_Jabra_Link_380_3050750A48A6-00.iec958-stereo"'
+alias output_laptop_speaker='pactl set-default-sink "alsa_output.pci-0000_00_1f.3.analog-stereo"'
+alias output_jabra_headphone='pactl set-default-sink "alsa_output.usb-0b0e_Jabra_Link_380_3050750A48A6-00.iec958-stereo"'
 alias output_ueboom='pacmd set-default-sink "bluez_sink.88_C6_26_9C_D0_6D.a2dp_sink"'
 ## Get server cpu info ##
 alias cpuinfo='lscpu'
@@ -230,3 +230,10 @@ source $ZSH/oh-my-zsh.sh
 # alias zshconfig="mate ~/.zshrc"
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+# Generated for envman. Do not edit.
+[ -s "$HOME/.config/envman/load.sh" ] && source "$HOME/.config/envman/load.sh"
+
+
+# add Pulumi to the PATH
+export PATH=$PATH:$HOME/.pulumi/bin
