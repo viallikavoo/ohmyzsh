@@ -1,13 +1,17 @@
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
 ##############################################################################
 # History Configuration
 ##############################################################################
-figlet "Welcome" | lolcat -a -s 99
-echo -e "\e[32mAny command you execute here will be recorded and \e[1;4;33mheld\e[0m against you" | lolcat -a
 eval $(ssh-agent -s)  &>/dev/null
 WORKSPACE=$HOME/Documents/Workspace
-ssh-add -k $WORKSPACE/github 2>/dev/null
-ssh-add -k $WORKSPACE/vmware-k8s 2>/dev/null
-#ssh-add -K $HOME/Documents/Workspace/Stash
+source <(kubectl completion zsh)
+ssh-add -k $HOME/.keys/github 2>/dev/null
 HISTSIZE=15000              #How many lines of history to keep in memory
 HISTFILE=~/zsh_history/zsh_history     #Where to save history to disk
 SAVEHIST=50000               #Number of history entries to save to disk
@@ -21,14 +25,18 @@ autoload zcalc
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
 export PATH=$PATH:/usr/local/go/bin
-export KOPS_STATE_STORE=s3://kops.infra.core.siteimprove.systems
+export PATH=$PATH:/opt/homebrew/bin
+export PATH=$PATH:/opt/homebrew/bin/aws_completer
+#export KOPS_STATE_STORE=s3://kops.infra.core.siteimprove.systems
 #eval `dircolors $HOME/Documents/Workspace/gnome-terminal/dircolors`
 source $HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 source $HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source $HOME/.oh-my-zsh/custom/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh
-source ~/.oh-my-zsh/custom.completion.kube.config
+#source ~/.oh-my-zsh/custom.completion.kube.config
+figlet "Welcome" | lolcat -a -s 99
+echo -e "\e[32mAny command you execute here will be recorded and \e[1;4;33mheld\e[0m against you" | lolcat -a
 ##################################Aliases go here##################################
-. $HOME/.asdf/asdf.sh
+#. $HOME/.asdf/asdf.sh
 alias workspace='cd $HOME/Documents/Workspace'
 alias ws='cd $HOME/Documents/Workspace'
 workspace
@@ -59,12 +67,7 @@ alias reboot='sudo /sbin/reboot'
 alias poweroff='sudo /sbin/poweroff'
 alias halt='sudo /sbin/halt'
 alias shutdown='export COMMIT_TITLE=$(date)_$(hostname) && cd ~/zsh_history && git pull && git add . && git commit -am "$COMMIT_TITLE" && git push && sudo /sbin/shutdown'
-alias vpnon='nmcli con up id "SiteImprove L2TP VPN"'
-alias vpnoff='nmcli con down id "SiteImprove L2TP VPN"'
 ## pass options to free ##
-alias output_laptop_speaker='pactl set-default-sink "alsa_output.pci-0000_00_1f.3.analog-stereo"'
-alias output_jabra_headphone='pactl set-default-sink "alsa_output.usb-0b0e_Jabra_Link_380_3050750A48A6-00.iec958-stereo"'
-alias output_ueboom='pacmd set-default-sink "bluez_sink.88_C6_26_9C_D0_6D.a2dp_sink"'
 ## Get server cpu info ##
 alias cpuinfo='lscpu'
 alias weather='curl "wttr.in/ørestad?format=4" && curl "wttr.in/ørestad"'
@@ -89,11 +92,6 @@ gitcp(){
 	git push
 }
 
-argome(){
-	argocd login argocd.stmprv.io --password yAg9NKRAH3BoggtCQhWGXphHQWqeAM3B --username admin
-	baseurl=https://argocd.stmprv.io/applications/
-	argocd app list -o name | grep $1 | while read -r line; do chromium "$baseurl$line"; done
-}
 
 gch(){
         branch=$1
@@ -141,7 +139,7 @@ export ZSH=$HOME/.oh-my-zsh
 # Set name of the theme to load. Optionally, if you set this to "random"
 # it'll load a random theme each time that oh-my-zsh is loaded.
 # See https://github.com/robbyrussell/oh-my-zsh/wiki/Themes
-ZSH_THEME="agnoster"
+ZSH_THEME="powerlevel10k/powerlevel10k"
 
 # Set list of themes to load
 # Setting this variable when ZSH_THEME=random
@@ -200,7 +198,9 @@ plugins=(
   sudo
 )
 source $ZSH/oh-my-zsh.sh 
-
+autoload bashcompinit && bashcompinit
+autoload -Uz compinit && compinit
+complete -C '/opt/homebrew/bin/aws_completer' aws
 # User configuration
 
 # export MANPATH="/usr/local/man:$MANPATH"
@@ -237,3 +237,6 @@ source $ZSH/oh-my-zsh.sh
 
 # add Pulumi to the PATH
 export PATH=$PATH:$HOME/.pulumi/bin
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
