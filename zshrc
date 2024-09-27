@@ -1,3 +1,5 @@
+# Amazon Q pre block. Keep at the top of this file.
+[[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.pre.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.pre.zsh"
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
@@ -10,7 +12,6 @@ fi
 ##############################################################################
 eval $(ssh-agent -s)  &>/dev/null
 WORKSPACE=$HOME/Documents/Workspace
-source <(kubectl completion zsh)
 ssh-add -k $HOME/.keys/github 2>/dev/null
 HISTSIZE=15000              #How many lines of history to keep in memory
 HISTFILE=~/zsh_history/zsh_history     #Where to save history to disk
@@ -22,16 +23,25 @@ setopt incappendhistory  #Immediately append to the history file, not just when 
 autoload zcalc
 #stty -ixon
 #export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_144.jdk/Contents/Home
+export PATH=$PATH:$HOME/.pulumi/bin
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
 export PATH=$PATH:/usr/local/go/bin
+export PATH=$PATH:~/go/bin
 export PATH=$PATH:/opt/homebrew/bin
-export PATH=$PATH:/opt/homebrew/bin/aws_completer
-#export KOPS_STATE_STORE=s3://kops.infra.core.siteimprove.systems
+#export PATH=$PATH:/opt/homebrew/bin/aws_completer
 #eval `dircolors $HOME/Documents/Workspace/gnome-terminal/dircolors`
+export LANG="en_US.UTF-8"
+export LC_ALL="en_US.UTF-8"
+export LC_CTYPE="en_US.UTF-8"
+export PULUMI_K8S_SUPPRESS_HELM_HOOK_WARNINGS=true
 source $HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 source $HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source $HOME/.oh-my-zsh/custom/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh
+export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+export NVM_DIR="$HOME/.nvm"
+[ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"  # This loads nvm
+[ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"  # This loads nvm bash_completion
 #source ~/.oh-my-zsh/custom.completion.kube.config
 figlet "Welcome" | lolcat -a -s 99
 echo -e "\e[32mAny command you execute here will be recorded and \e[1;4;33mheld\e[0m against you" | lolcat -a
@@ -39,7 +49,8 @@ echo -e "\e[32mAny command you execute here will be recorded and \e[1;4;33mheld\
 #. $HOME/.asdf/asdf.sh
 alias workspace='cd $HOME/Documents/Workspace'
 alias ws='cd $HOME/Documents/Workspace'
-workspace
+alias lsp='fzf --preview "bat --color=always --style=numbers --line-range=:500 {}"'
+#workspace
 #ls -d */| xargs -P10 -I{} git -C {} pull
 alias ph='git push'
 alias pl='git pull'
@@ -54,6 +65,14 @@ alias ....='cd ../../../../'
 alias .....='cd ../../../../../'
 alias .4='cd ../../../../'
 alias .5='cd ../../../../../'
+alias pp='pulumi preview'
+alias pu='pulumi up'
+alias pr='pulumi refresh'
+alias pss='pulumi stack select'
+alias mdev='terraform workspace select dev'
+alias mhub='terraform workspace select hub'
+alias mpre='terraform workspace select pre'
+alias mprd='terraform workspace select prd'
 ## Colorize the grep command output for ease of use (good for log files)##
 alias grep='grep --color=auto'
 alias egrep='egrep --color=auto'
@@ -71,6 +90,8 @@ alias shutdown='export COMMIT_TITLE=$(date)_$(hostname) && cd ~/zsh_history && g
 ## Get server cpu info ##
 alias cpuinfo='lscpu'
 alias weather='curl "wttr.in/ørestad?format=4" && curl "wttr.in/ørestad"'
+alias docker=podman
+export KIND_EXPERIMENTAL_PROVIDE=podmam
 ##################################Functions##################################
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
@@ -91,8 +112,23 @@ gitcp(){
         git commit -am "$1"
 	git push
 }
+nr(){
+        message=$1
+        display_usage() {
+                echo "target required"
+        }
 
+        if [  $# -ne 1 ]
+                then
+                        display_usage
+                        return 1
+        fi
 
+        npm run "$1"
+}
+batdiff() {
+    git diff --name-only --relative --diff-filter=d | xargs bat --diff
+}
 gch(){
         branch=$1
         display_usage() {
@@ -126,7 +162,7 @@ awsclear(){
 kubectlgetall(){
   for i in $(kubectl --context ${1} api-resources --verbs=list --namespaced -o name | grep -v "events.events.k8s.io" | grep -v "events" | sort | uniq); do
     echo "Resource:" $i
-    kubectl --context ${1} -n ${2} get --ignore-not-found ${i}
+    kubectl --context ${1} -n ${2} get ${i} --ignore-not-found
   done
 }
 ##################################adding keyskeys##################################
@@ -198,9 +234,11 @@ plugins=(
   sudo
 )
 source $ZSH/oh-my-zsh.sh 
+#AWS autocomplete
 autoload bashcompinit && bashcompinit
 autoload -Uz compinit && compinit
 complete -C '/opt/homebrew/bin/aws_completer' aws
+source <(kubectl completion zsh)
 # User configuration
 
 # export MANPATH="/usr/local/man:$MANPATH"
@@ -234,9 +272,11 @@ complete -C '/opt/homebrew/bin/aws_completer' aws
 # Generated for envman. Do not edit.
 [ -s "$HOME/.config/envman/load.sh" ] && source "$HOME/.config/envman/load.sh"
 
-
-# add Pulumi to the PATH
-export PATH=$PATH:$HOME/.pulumi/bin
-
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+
+[[ -f "$HOME/fig-export/dotfiles/dotfile.zsh" ]] && builtin source "$HOME/fig-export/dotfiles/dotfile.zsh"
+
+# Amazon Q post block. Keep at the bottom of this file.
+[[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh"
